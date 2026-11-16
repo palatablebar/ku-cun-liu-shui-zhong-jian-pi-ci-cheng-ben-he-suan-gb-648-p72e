@@ -1,0 +1,2 @@
+doc_no,line_no,doc_type,warehouse,sku,qty,unit,price,ts,direction,ref_doc,revision
+RK-5101,1,采购入库,WH-A,000123,10,kg,10.0000,2026-05-02T09:00:00+08:00,入,,1

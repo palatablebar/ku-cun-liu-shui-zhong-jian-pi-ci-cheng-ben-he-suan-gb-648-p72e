@@ -1,0 +1,27 @@
+{
+  "counts": {
+    "raw_rows": 34,
+    "applied": 14,
+    "quarantined": 18,
+    "superseded": 1,
+    "duplicate": 1,
+    "blank": 0,
+    "segments": 2
+  },
+  "quantities": {
+    "opening_qty": "182.5000",
+    "in_qty": "1672.2000",
+    "out_qty": "940.0000",
+    "adj_in_qty": "0.5000",
+    "adj_out_qty": "5.0000",
+    "ending_qty": "910.2000"
+  },
+  "cogs": "8520.0000",
+  "ending_value": "8407.4000",
+  "layers": 13,
+  "segments": 6,
+  "counts_rows": 5,
+  "adjusted_qty": "909.5000",
+  "count_adjust_value": "-12.0000",
+  "reconcile_ok": true
+}

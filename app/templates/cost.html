@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block body %}
+<section class="stats">
+  <div class="stat"><span class="stat-label">消耗金额 ¥</span><strong class="stat-value">{{ cost.cogs_totals.consumed | money }}</strong></div>
+  <div class="stat"><span class="stat-label">退货恢复 ¥</span><strong class="stat-value">{{ cost.cogs_totals.restored | money }}</strong></div>
+  <div class="stat"><span class="stat-label">出库成本 ¥</span><strong class="stat-value accent">{{ cost.cogs_totals.net | money }}</strong></div>
+  <div class="stat"><span class="stat-label">消耗段</span><strong class="stat-value">{{ cost.cogs_totals.segments }}</strong></div>
+  <div class="stat"><span class="stat-label">期末金额 ¥</span><strong class="stat-value">{{ cost.layer_totals.value | money }}</strong></div>
+  <div class="stat"><span class="stat-label">期末数量 kg</span><strong class="stat-value">{{ cost.layer_totals.qty | qty }}</strong></div>
+</section>
+
+<div class="split">
+  <section class="panel">
+    <header class="panel-head"><h2>按单据成本</h2><span class="panel-sub">{{ cost.cogs | length }} 张</span></header>
+    <div class="table-wrap">
+      <table class="table" data-sortable>
+        <thead><tr><th>单据号</th><th>类型</th><th class="num" data-sort="num">消耗 kg</th><th class="num" data-sort="num">消耗金额</th><th class="num" data-sort="num">退货恢复</th><th class="num" data-sort="num">净成本</th><th class="num">段数</th></tr></thead>
+        <tbody>
+          {% for row in cost.cogs %}
+          <tr>
+            <td>{{ row.doc_no }}</td>
+            <td>{{ row.kinds }}</td>
+            <td class="num">{{ row.qty | qty }}</td>
+            <td class="num">{{ row.consumed | money }}</td>
+            <td class="num">{{ row.returned | money }}</td>
+            <td class="num">{{ row.net | money }}</td>
+            <td class="num">{{ row.segments }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="7" class="hint">没有消耗。</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel">
+    <header class="panel-head"><h2>按消耗类型</h2><span class="panel-sub">{{ cost.kinds | length }} 类</span></header>
+    <table class="table">
+      <thead><tr><th>类型</th><th class="num">数量 kg</th><th class="num">金额</th><th class="num">段数</th></tr></thead>
+      <tbody>
+        {% for row in cost.kinds %}
+        <tr>
+          <td>{{ row.kind }}</td>
+          <td class="num">{{ row.qty | qty }}</td>
+          <td class="num">{{ row.amount | money }}</td>
+          <td class="num">{{ row.segments }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" class="hint">没有消耗。</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <div class="panel-body">
+      <table class="table">
+        <thead><tr><th>项</th><th class="num">期望</th><th class="num">实际</th><th>状态</th></tr></thead>
+        <tbody>
+          {% for item in cost.checks %}
+          <tr class="{% if not item.ok %}is-bad{% endif %}">
+            <td>{{ item.label }}</td>
+            <td class="num">{{ item.expect }}</td>
+            <td class="num">{{ item.actual }}</td>
+            <td><span class="dot dot-{{ 'ok' if item.ok else 'bad' }}"></span>{{ '通过' if item.ok else '差异' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}

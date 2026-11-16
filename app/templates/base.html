@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ title }} · stockflow</title>
+  <link rel="stylesheet" href="/static/theme.css">
+  <link rel="stylesheet" href="/static/layout.css">
+  <link rel="stylesheet" href="/static/components.css">
+</head>
+<body class="app" data-current="{{ current }}">
+  <aside class="rail">
+    <div class="brand">STOCKFLOW</div>
+    <nav class="rail-nav">
+      {% for label, href in nav %}
+      <a class="rail-link{% if current == href %} is-active{% endif %}" href="{{ href }}"><span class="dot{% if current == href %} dot-ok{% endif %}"></span>{{ label }}</a>
+      {% endfor %}
+    </nav>
+    <div class="rail-foot">{{ settings.rule_version }}</div>
+  </aside>
+  <main class="main">
+    <header class="topbar">
+      <h1>{{ title }}</h1>
+      <div class="topbar-meta">
+        <span>批次 <b data-run-id>{{ run.run_id if run else '—' }}</b></span>
+        <span>生成 {{ run.created_at | localdt if run else '—' }}</span>
+        <span>时区 +08:00</span>
+        <span>规则 {{ settings.rule_version }}</span>
+      </div>
+    </header>
+    <div class="page">
+      {% block body %}{% endblock %}
+    </div>
+  </main>
+  <script src="/static/app.js" defer></script>
+  <script src="/static/table.js" defer></script>
+  <script src="/static/console.js" defer></script>
+</body>
+</html>

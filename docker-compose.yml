@@ -1,0 +1,21 @@
+services:
+  app:
+    build: .
+    image: stockflow:local
+    environment:
+      STOCKFLOW_DB: /data/stockflow.sqlite
+      STOCKFLOW_AUTOSEED: "1"
+      TZ: Asia/Shanghai
+    ports:
+      - "18207:8000"
+    volumes:
+      - stockflow-data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://127.0.0.1:8000/api/health', timeout=2.0)"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 5s
+
+volumes:
+  stockflow-data:

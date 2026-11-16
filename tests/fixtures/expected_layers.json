@@ -1,0 +1,106 @@
+{
+  "L000001": {
+    "sku": "000123",
+    "warehouse": "WH-A",
+    "origin": "OPEN",
+    "unit_cost": "10.0000",
+    "qty_in": "100.0000",
+    "qty_remaining": "100.0000"
+  },
+  "L000002": {
+    "sku": "000456",
+    "warehouse": "WH-A",
+    "origin": "OPEN",
+    "unit_cost": "8.0000",
+    "qty_in": "50.0000",
+    "qty_remaining": "15.0000"
+  },
+  "L000003": {
+    "sku": "000123",
+    "warehouse": "WH-B",
+    "origin": "OPEN",
+    "unit_cost": "10.0000",
+    "qty_in": "20.0000",
+    "qty_remaining": "20.0000"
+  },
+  "L000004": {
+    "sku": "000999",
+    "warehouse": "WH-C",
+    "origin": "OPEN",
+    "unit_cost": "24.0000",
+    "qty_in": "12.5000",
+    "qty_remaining": "2.5000"
+  },
+  "L000005": {
+    "sku": "000123",
+    "warehouse": "WH-A",
+    "origin": "采购入库",
+    "unit_cost": "10.0000",
+    "qty_in": "1200.0000",
+    "qty_remaining": "400.0000"
+  },
+  "L000006": {
+    "sku": "000456",
+    "warehouse": "WH-A",
+    "origin": "采购入库",
+    "unit_cost": "8.0000",
+    "qty_in": "200.0000",
+    "qty_remaining": "200.0000"
+  },
+  "L000007": {
+    "sku": "000789",
+    "warehouse": "WH-A",
+    "origin": "采购入库",
+    "unit_cost": "12.0000",
+    "qty_in": "1.0000",
+    "qty_remaining": "1.0000"
+  },
+  "L000008": {
+    "sku": "000456",
+    "warehouse": "WH-C",
+    "origin": "调拨",
+    "unit_cost": "8.0000",
+    "qty_in": "30.0000",
+    "qty_remaining": "30.0000"
+  },
+  "L000009": {
+    "sku": "000456",
+    "warehouse": "WH-A",
+    "origin": "退货入库",
+    "unit_cost": "9.5000",
+    "qty_in": "10.0000",
+    "qty_remaining": "10.0000"
+  },
+  "L000010": {
+    "sku": "000789",
+    "warehouse": "WH-A",
+    "origin": "盘点调整",
+    "unit_cost": "12.0000",
+    "qty_in": "0.5000",
+    "qty_remaining": "0.5000"
+  },
+  "L000011": {
+    "sku": "000456",
+    "warehouse": "WH-A",
+    "origin": "采购入库",
+    "unit_cost": "8.0000",
+    "qty_in": "120.0000",
+    "qty_remaining": "120.0000"
+  },
+  "L000012": {
+    "sku": "000123",
+    "warehouse": "WH-A",
+    "origin": "采购入库",
+    "unit_cost": "12.0000",
+    "qty_in": "1.2000",
+    "qty_remaining": "1.2000"
+  },
+  "L000013": {
+    "sku": "000123",
+    "warehouse": "WH-A",
+    "origin": "采购入库",
+    "unit_cost": "10.0000",
+    "qty_in": "10.0000",
+    "qty_remaining": "10.0000"
+  }
+}

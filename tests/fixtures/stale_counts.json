@@ -1,0 +1,21 @@
+{
+  "count_no": "PD-X-09",
+  "revision": 2,
+  "rows": [
+    {"sku": "000123", "warehouse": "WH-A", "counted_qty": "511", "unit": "kg"}
+  ],
+  "stale": {
+    "count_no": "PD-X-09",
+    "revision": 1,
+    "rows": [
+      {"sku": "000123", "warehouse": "WH-A", "counted_qty": "505", "unit": "kg"}
+    ]
+  },
+  "conflict": {
+    "count_no": "PD-X-09",
+    "revision": 2,
+    "rows": [
+      {"sku": "000123", "warehouse": "WH-A", "counted_qty": "503", "unit": "kg"}
+    ]
+  }
+}

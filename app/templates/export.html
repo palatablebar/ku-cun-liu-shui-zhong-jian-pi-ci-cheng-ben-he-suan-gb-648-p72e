@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block body %}
+<section class="stats">
+  <div class="stat"><span class="stat-label">采纳行</span><strong class="stat-value">{{ summary.counts.applied }}</strong></div>
+  <div class="stat"><span class="stat-label">隔离行</span><strong class="stat-value">{{ summary.counts.quarantined }}</strong></div>
+  <div class="stat"><span class="stat-label">被取代</span><strong class="stat-value">{{ summary.counts.superseded }}</strong></div>
+  <div class="stat"><span class="stat-label">期末数量 kg</span><strong class="stat-value accent">{{ summary.totals.ending_qty | qty }}</strong></div>
+  <div class="stat"><span class="stat-label">出库成本 ¥</span><strong class="stat-value">{{ summary.totals.cogs | money }}</strong></div>
+  <div class="stat"><span class="stat-label">期末金额 ¥</span><strong class="stat-value">{{ summary.totals.ending_value | money }}</strong></div>
+</section>
+
+<div class="split">
+  <section class="panel">
+    <header class="panel-head"><h2>导出文件</h2><span class="panel-sub">{{ summary.files | length }} 个</span></header>
+    <ul class="file-list panel-body">
+      {% for item in summary.files %}
+      <li>
+        <a href="/api/export/{{ item.kind }}">{{ item.kind }}</a>
+        <span class="panel-sub">{{ item.label }} · {{ item.rows }} 行</span>
+      </li>
+      {% endfor %}
+      <li>
+        <a href="/api/quarantine.csv">quarantine.csv</a>
+        <span class="panel-sub">隔离证据 · {{ summary.counts.quarantined }} 行</span>
+      </li>
+    </ul>
+  </section>
+
+  <section class="panel">
+    <header class="panel-head"><h2>运行清单</h2><span class="panel-sub">{{ summary.run_id if summary.run_id else '—' }}</span></header>
+    <pre class="code">{% for line in manifest %}{{ line }}
+{% endfor %}</pre>
+  </section>
+</div>
+
+<section class="panel">
+  <header class="panel-head"><h2>数量分项</h2><span class="panel-sub">kg</span></header>
+  <table class="table">
+    <thead><tr><th>项</th><th class="num">数量</th></tr></thead>
+    <tbody>
+      <tr><td>期初</td><td class="num">{{ summary.totals.opening_qty | qty }}</td></tr>
+      <tr><td>入库</td><td class="num">{{ summary.totals.in_qty | qty }}</td></tr>
+      <tr><td>出库</td><td class="num">{{ summary.totals.out_qty | qty }}</td></tr>
+      <tr><td>调整入</td><td class="num">{{ summary.totals.adj_in_qty | qty }}</td></tr>
+      <tr><td>调整出</td><td class="num">{{ summary.totals.adj_out_qty | qty }}</td></tr>
+      <tr><td>期末</td><td class="num">{{ summary.totals.ending_qty | qty }}</td></tr>
+    </tbody>
+  </table>
+</section>
+{% endblock %}

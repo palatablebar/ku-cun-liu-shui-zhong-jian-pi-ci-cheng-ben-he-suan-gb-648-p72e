@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="filters">
+  <a class="chip{% if not status %} is-active{% endif %}" href="/movements">全部 {{ total }}</a>
+  {% for item in statuses %}
+  <a class="chip{% if status == item %} is-active{% endif %}" href="/movements?status={{ item }}">{{ item | status_label }}</a>
+  {% endfor %}
+  <span class="panel-sub">显示 {{ rows | length }} 行</span>
+  <a class="chip" href="/api/quarantine.csv">隔离 CSV</a>
+</div>
+
+<section class="panel">
+  <header class="panel-head">
+    <h2>流水行</h2>
+    <span class="panel-sub">{{ rows | length }} / {{ total }}</span>
+  </header>
+  <div class="table-wrap">
+    <table class="table" data-sortable>
+      <thead>
+        <tr>
+          <th class="num" data-sort="num">文件行</th>
+          <th>状态</th>
+          <th>原因码</th>
+          <th>单据号</th>
+          <th class="num" data-sort="num">行</th>
+          <th class="num" data-sort="num">版本</th>
+          <th>类型</th>
+          <th>方向</th>
+          <th>仓库</th>
+          <th>物料编码</th>
+          <th class="num" data-sort="num">数量 kg</th>
+          <th>单位</th>
+          <th class="num" data-sort="num">单价</th>
+          <th>发生时间</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr class="{% if row.status == 'quarantine' %}is-bad{% elif row.status in ('superseded', 'duplicate') %}is-warn{% endif %}">
+          <td class="num">{{ row.row_no }}</td>
+          <td><span class="dot dot-{{ row.status }}"></span>{{ row.status | status_label }}</td>
+          <td title="{{ row.reason | reason_label }}">{{ row.reason }}</td>
+          <td>{{ row.doc_no }}</td>
+          <td class="num">{{ row.line_no }}</td>
+          <td class="num">{{ row.revision }}</td>
+          <td>{{ row.doc_type }}</td>
+          <td>{{ row.direction | direction_label }}</td>
+          <td>{{ row.warehouse }}</td>
+          <td>{{ row.sku }}</td>
+          <td class="num">{{ row.qty_kg | qty }}</td>
+          <td>{{ row.unit }}</td>
+          <td class="num">{{ row.price | money }}</td>
+          <td>{{ row.ts_utc | localdt }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="14" class="hint">没有流水行。</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if truncated %}<p class="notice">只显示前 400 行。</p>{% endif %}
+</section>
+
+<div class="row-2">
+  <section class="panel">
+    <header class="panel-head"><h2>原值</h2><span class="panel-sub">隔离与重复</span></header>
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th class="num">文件行</th><th>原数量</th><th>原单位</th><th>原单价</th><th>原时间</th></tr></thead>
+        <tbody>
+          {% for row in rows %}{% if row.status != 'valid' %}
+          <tr>
+            <td class="num">{{ row.row_no }}</td>
+            <td>{{ row.raw_qty }}</td>
+            <td>{{ row.raw_unit }}</td>
+            <td>{{ row.raw_cost }}</td>
+            <td>{{ row.raw_ts }}</td>
+          </tr>
+          {% endif %}{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  <section class="panel">
+    <header class="panel-head"><h2>隔离分布</h2><span class="panel-sub">{{ distribution | length }} 类</span></header>
+    <table class="table">
+      <thead><tr><th>原因码</th><th>原因</th><th class="num">条数</th><th></th></tr></thead>
+      <tbody>
+        {% for item in distribution %}
+        <tr>
+          <td>{{ item.code }}</td>
+          <td>{{ item.label }}</td>
+          <td class="num">{{ item.count }}</td>
+          <td><a class="chip" href="/movements?status=quarantine&amp;reason={{ item.code }}">筛选</a></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" class="hint">没有隔离行。</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+</div>
+{% endblock %}

@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block body %}
+<section class="stats">
+  <div class="stat"><span class="stat-label">层数</span><strong class="stat-value">{{ layer_totals.layers }}</strong></div>
+  <div class="stat"><span class="stat-label">剩余数量 kg</span><strong class="stat-value accent">{{ layer_totals.qty | qty }}</strong></div>
+  <div class="stat"><span class="stat-label">层金额 ¥</span><strong class="stat-value">{{ layer_totals.value | money }}</strong></div>
+  <div class="stat"><span class="stat-label">已耗尽层</span><strong class="stat-value">{{ layer_totals.empty }}</strong></div>
+  <div class="stat"><span class="stat-label">期末数量 kg</span><strong class="stat-value">{{ (run.ending_qty if run else 0) | qty }}</strong></div>
+  <div class="stat"><span class="stat-label">期末金额 ¥</span><strong class="stat-value">{{ (run.ending_value if run else 0) | money }}</strong></div>
+</section>
+
+<div class="row-2">
+  <section class="panel">
+    <header class="panel-head"><h2>按物料汇总</h2><span class="panel-sub">{{ layer_rows | length }} 组</span></header>
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>物料编码</th><th>仓库</th><th class="num">在手 kg</th><th class="num">层成本</th><th class="num">层金额</th><th class="num">层数</th><th>来源</th></tr></thead>
+        <tbody>
+          {% for row in layer_rows %}
+          <tr>
+            <td>{{ row.sku }}</td>
+            <td>{{ row.warehouse }}</td>
+            <td class="num">{{ row.qty | qty }}</td>
+            <td class="num">{{ row.unit_cost | money }}</td>
+            <td class="num">{{ row.value | money }}</td>
+            <td class="num">{{ row.layers }}</td>
+            <td>{% for origin in row.origins %}<span class="tag">{{ origin | origin_label }}</span>{% endfor %}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="7" class="hint">没有层。</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel">
+    <header class="panel-head"><h2>层校验</h2><span class="panel-sub">{{ (checks | selectattr('ok') | list | length) }}/{{ checks | length }} 通过</span></header>
+    <table class="table">
+      <thead><tr><th>项</th><th class="num">期望</th><th class="num">实际</th><th>状态</th></tr></thead>
+      <tbody>
+        {% for item in checks %}
+        <tr class="{% if not item.ok %}is-bad{% endif %}">
+          <td>{{ item.label }}</td>
+          <td class="num">{{ item.expect }}</td>
+          <td class="num">{{ item.actual }}</td>
+          <td><span class="dot dot-{{ 'ok' if item.ok else 'bad' }}"></span>{{ '通过' if item.ok else '差异' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+</div>
+
+<section class="panel">
+  <header class="panel-head"><h2>FIFO 层</h2><span class="panel-sub">{{ layers | length }} 层</span></header>
+  <div class="table-wrap">
+    <table class="table" data-sortable>
+      <thead>
+        <tr><th>层号</th><th>物料编码</th><th>仓库</th><th>来源</th><th>单据号</th><th>建层时间</th><th class="num" data-sort="num">层成本</th><th class="num" data-sort="num">入层 kg</th><th class="num" data-sort="num">剩余 kg</th><th class="num" data-sort="num">层金额</th></tr>
+      </thead>
+      <tbody>
+        {% for layer in layers %}
+        <tr class="{% if layer | zerorem %}is-warn{% endif %}">
+          <td>{{ layer.layer_id }}</td>
+          <td>{{ layer.sku }}</td>
+          <td>{{ layer.warehouse }}</td>
+          <td>{{ layer.origin | origin_label }}</td>
+          <td>{{ layer.doc_no or '—' }}</td>
+          <td>{{ layer.created_ts | localdt }}</td>
+          <td class="num">{{ layer.unit_cost | money }}</td>
+          <td class="num">{{ layer.qty_in | qty }}</td>
+          <td class="num">{{ layer.qty_remaining | qty }}</td>
+          <td class="num">{{ layer | layervalue }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="10" class="hint">没有层。</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

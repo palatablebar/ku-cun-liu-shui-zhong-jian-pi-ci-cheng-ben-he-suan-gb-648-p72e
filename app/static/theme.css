@@ -1,0 +1,79 @@
+/* L1 运维控制台：深色、等宽、密排、零圆角。同批其他项目不得复用本文件。 */
+:root {
+  --bg: #0d1117;
+  --bg-deep: #080c11;
+  --surface: #111820;
+  --surface-2: #16202a;
+  --surface-3: #1b2733;
+  --ink: #d7e3ea;
+  --ink-muted: #8a9aa6;
+  --ink-dim: #5d6d79;
+  --line: #1f2c37;
+  --line-strong: #2c3d4a;
+  --accent: #2dd4bf;
+  --accent-ink: #04211f;
+  --ok: #3fb950;
+  --warn: #d29922;
+  --bad: #f85149;
+  --info: #58a6ff;
+  --font-ui: ui-monospace, "SF Mono", Menlo, Consolas, "Noto Sans Mono CJK SC", monospace;
+  --font-num: ui-monospace, "SF Mono", Menlo, Consolas, "Noto Sans Mono CJK SC", monospace;
+  --radius: 0px;
+  --radius-sm: 0px;
+  --pad: 10px;
+  --gap: 8px;
+  --shadow: none;
+  --rail: 108px;
+  --row: 26px;
+  --fs-base: 12px;
+  --fs-small: 11px;
+  --fs-title: 15px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: var(--fs-base);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
