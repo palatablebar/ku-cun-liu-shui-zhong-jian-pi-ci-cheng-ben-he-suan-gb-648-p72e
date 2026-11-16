@@ -75,13 +75,20 @@ def opening_layers(opening_rows: list[dict]) -> list[dict]:
     return layers
 
 
-def replay(rows: list[dict], opening_rows: list[dict], settings) -> dict:
-    """返回层、消耗段、逐行状态与四本账的数量与金额分项。"""
+def replay(rows: list[dict], opening_rows: list[dict], settings,
+           eligible_seq: set[int] | None = None) -> dict:
+    """返回层、消耗段、逐行状态与四本账的数量与金额分项。
+
+    eligible_seq 给定时，只有 seq 在集合内的行可进入重放（版本裁决的反事实重放使用）；
+    默认 None 表示所有 status=valid 的行都可进入，主流程口径不变。
+    """
     for row in rows:
         row["flags"] = list(row.get("flags") or [])
         row["applied_seq"] = 0
 
-    valid = [row for row in rows if row["status"] == "valid"]
+    valid = [row for row in rows
+             if row["status"] == "valid"
+             and (eligible_seq is None or row["seq"] in eligible_seq)]
     pairs, broken = pair_transfers(
         [row for row in valid if row["direction"] in ("TRN_OUT", "TRN_IN")]
     )

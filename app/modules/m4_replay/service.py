@@ -45,12 +45,17 @@ def apply(settings, store, run) -> dict:
     parsed = m1_service.read_file(
         settings, movements_file, path.read_bytes(), contract.aliases("movements"))
     from ..m3_quality import service as m3_service
+    from ..m3_quality import revisions as revisions_mod
 
     built = m3_service.build(settings, parsed)
     rows = built["rows"]
+    decisions = built["decisions"]
     opening_rows = load_opening(settings, run.get("opening_file") or "")
     outcome = replay_rows(settings, rows, opening_rows)
-    store.replace_replay(run["run_id"], outcome["layers"], outcome["segments"], rows)
+    revisions_mod.compute_impacts(
+        decisions, rows, opening_rows, settings, outcome["totals"])
+    store.replace_replay(run["run_id"], outcome["layers"], outcome["segments"], rows,
+                         decisions=decisions)
     store.update_totals(
         run["run_id"],
         {

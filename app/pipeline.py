@@ -15,6 +15,7 @@ from .modules.m1_ingest import service as m1_service
 from .modules.m2_doc_rules import contract
 from .modules.m2_doc_rules import service as m2_service
 from .modules.m3_quality import service as m3_service
+from .modules.m3_quality import revisions as revisions_mod
 from .modules.m4_replay import service as m4_service
 from .modules.m6_reconcile import balance as balance_mod
 from .modules.m6_reconcile import service as m6_service
@@ -81,12 +82,14 @@ def run_chain(settings: Settings, store, movements=None, opening=None,
 
     built = m3_service.build(settings, parsed_movements)
     rows = built["rows"]
+    decisions = built["decisions"]
     note(
         "INFO", "质量",
         f"采纳 {sum(1 for row in rows if row['status'] == 'valid')}"
         f" 隔离 {sum(1 for row in rows if row['status'] == 'quarantine')}"
         f" 被取代 {sum(1 for row in rows if row['status'] == 'superseded')}"
-        f" 重复 {sum(1 for row in rows if row['status'] == 'duplicate')}",
+        f" 重复 {sum(1 for row in rows if row['status'] == 'duplicate')}"
+        f" 回退旧版 {built['counts']['fallback']}",
     )
 
     parsed_opening, opening_bytes = _load(
@@ -112,6 +115,38 @@ def run_chain(settings: Settings, store, movements=None, opening=None,
         f"出库超在手 {sum(1 for row in rows if row['reason'] == 'OUT_EXCEEDS_STOCK')}"
         f" 调拨问题 {sum(1 for row in rows if row['reason'] in TRANSFER_REASONS)}",
     )
+
+    # 版本裁决影响：对「实际未采纳最高版本」的键做反事实重放，量化成本与期末库存差额。
+    revisions_mod.compute_impacts(
+        decisions, rows, opening_rows, settings, outcome["totals"])
+    fallback_keys = [item for item in decisions
+                     if item["outcome"] == "rejected_fallback"]
+    if fallback_keys:
+        note(
+            "WARN", "版本裁决",
+            f"新版本判废回退旧版 {len(fallback_keys)} 键："
+            + "；".join(
+                f"{item['doc_no']}-{item['line_no']} 采纳v{item['applied_revision']}"
+                f"（行{item['applied_row_no']}），新版行{item['rejected_row_no']}"
+                f" {item['rejected_reason']}"
+                for item in fallback_keys),
+        )
+    impacted = [
+        item for item in decisions if item.get("impact")
+        and any(item["impact"][key] not in ("0.0000", "0.00", "0")
+                for key in ("ending_qty_delta", "ending_value_delta", "cogs_delta"))
+    ]
+    if impacted:
+        note(
+            "WARN", "版本裁决",
+            "若改采纳判废新版本，影响 "
+            + "；".join(
+                f"{item['doc_no']}-{item['line_no']}"
+                f" 期末数量{item['impact']['ending_qty_delta']}kg"
+                f" 期末金额{item['impact']['ending_value_delta']}"
+                f" 出库成本{item['impact']['cogs_delta']}"
+                for item in impacted),
+        )
 
     parsed_counts, counts_bytes = _load(
         settings, count_name, count_raw, contract.aliases("counts"))
@@ -150,6 +185,7 @@ def run_chain(settings: Settings, store, movements=None, opening=None,
         "quarantined": sum(1 for row in rows if row["status"] == "quarantine"),
         "superseded": sum(1 for row in rows if row["status"] == "superseded"),
         "duplicate": sum(1 for row in rows if row["status"] == "duplicate"),
+        "fallback": built["counts"]["fallback"],
         "blank": parsed_movements["blank_rows"],
         "segments": parsed_movements["segments"],
         "opening_qty": totals["opening_qty"],
@@ -179,7 +215,8 @@ def run_chain(settings: Settings, store, movements=None, opening=None,
     run["duration_ms"] = int((time.monotonic() - started) * 1000)
     note("INFO", "完成", f"运行 {run['run_id']} 用时 {run['duration_ms']} ms")
 
-    store.save_run(run, rows, outcome["layers"], outcome["segments"], count_records, log)
+    store.save_run(run, rows, outcome["layers"], outcome["segments"], count_records, log,
+                   decisions=decisions)
     return summary(run, rows, outcome, count_records, report)
 
 
@@ -196,6 +233,7 @@ def summary(run: dict, rows: list[dict], outcome: dict,
             "quarantined": run["quarantined"],
             "superseded": run["superseded"],
             "duplicate": run["duplicate"],
+            "fallback": run.get("fallback", 0),
             "blank": run["blank"],
             "segments": run["segments"],
         },

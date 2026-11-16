@@ -4,6 +4,7 @@
   <div class="stat"><span class="stat-label">采纳行</span><strong class="stat-value">{{ summary.counts.applied }}</strong></div>
   <div class="stat"><span class="stat-label">隔离行</span><strong class="stat-value">{{ summary.counts.quarantined }}</strong></div>
   <div class="stat"><span class="stat-label">被取代</span><strong class="stat-value">{{ summary.counts.superseded }}</strong></div>
+  <div class="stat"><span class="stat-label">回退采纳</span><strong class="stat-value">{{ summary.counts.fallback }}</strong></div>
   <div class="stat"><span class="stat-label">期末数量 kg</span><strong class="stat-value accent">{{ summary.totals.ending_qty | qty }}</strong></div>
   <div class="stat"><span class="stat-label">出库成本 ¥</span><strong class="stat-value">{{ summary.totals.cogs | money }}</strong></div>
   <div class="stat"><span class="stat-label">期末金额 ¥</span><strong class="stat-value">{{ summary.totals.ending_value | money }}</strong></div>

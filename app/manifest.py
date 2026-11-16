@@ -71,6 +71,7 @@ def build_manifest(run: dict, checks: list[dict] | None = None) -> dict:
             "quarantined": run.get("quarantined", 0),
             "superseded": run.get("superseded", 0),
             "duplicate": run.get("duplicate", 0),
+            "fallback": run.get("fallback", 0),
             "blank": run.get("blank", 0),
             "segments": run.get("segments", 0),
         },

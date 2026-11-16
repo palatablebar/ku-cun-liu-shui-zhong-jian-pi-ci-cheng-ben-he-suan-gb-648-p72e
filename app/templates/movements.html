@@ -5,8 +5,9 @@
   {% for item in statuses %}
   <a class="chip{% if status == item %} is-active{% endif %}" href="/movements?status={{ item }}">{{ item | status_label }}</a>
   {% endfor %}
-  <span class="panel-sub">显示 {{ rows | length }} 行</span>
+  <span class="panel-sub">显示 {{ rows | length }} 行{% if fallback_count %} · 其中 {{ fallback_count }} 行为新版判废后回退旧版入账{% endif %}</span>
   <a class="chip" href="/api/quarantine.csv">隔离 CSV</a>
+  <a class="chip" href="/revisions">版本裁决</a>
 </div>
 
 <section class="panel">
@@ -36,9 +37,14 @@
       </thead>
       <tbody>
         {% for row in rows %}
-        <tr class="{% if row.status == 'quarantine' %}is-bad{% elif row.status in ('superseded', 'duplicate') %}is-warn{% endif %}">
+        <tr class="{% if row.status == 'quarantine' %}is-bad{% elif row.status in ('superseded', 'duplicate') or 'FALLBACK_APPLIED' in row.get('flags', []) %}is-warn{% endif %}">
           <td class="num">{{ row.row_no }}</td>
-          <td><span class="dot dot-{{ row.status }}"></span>{{ row.status | status_label }}</td>
+          <td>
+            <span class="dot dot-{{ row.status }}"></span>{{ row.status | status_label }}
+            {% if 'FALLBACK_APPLIED' in row.get('flags', []) %}
+            <span class="tag tag-warn" title="新版本判废，本行作为干净旧版被回退采纳">回退采纳</span>
+            {% endif %}
+          </td>
           <td title="{{ row.reason | reason_label }}">{{ row.reason }}</td>
           <td>{{ row.doc_no }}</td>
           <td class="num">{{ row.line_no }}</td>

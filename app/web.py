@@ -8,6 +8,7 @@ from fastapi.templating import Jinja2Templates
 
 from . import reasons
 from .config import BASE_DIR
+from .modules.m3_quality import revisions as revisions_mod
 from .modules.m5_cost import service as cost_service
 from .modules.m6_reconcile import service as reconcile_service
 from .modules.m7_export import service as export_service
@@ -19,6 +20,7 @@ LOCAL_TZ = timezone(timedelta(hours=8))
 NAV = (
     ("控制台", "/"),
     ("流水", "/movements"),
+    ("版本裁决", "/revisions"),
     ("批次层", "/layers"),
     ("成本", "/cost"),
     ("盘点", "/reconcile"),
@@ -208,7 +210,13 @@ def setup(app: FastAPI) -> None:
                         1 for row in movements if row["status"] == "superseded"),
                     "duplicate": sum(
                         1 for row in movements if row["status"] == "duplicate"),
+                    "fallback": sum(
+                        1 for row in movements
+                        if "FALLBACK_APPLIED" in row.get("flags", [])),
                 },
+                "revision_summary": revisions_mod.summarize(
+                    store.revision_decisions(run["run_id"])) if run else
+                revisions_mod.summarize([]),
             }
         )
         return render(request, "index.html", context)
@@ -235,9 +243,26 @@ def setup(app: FastAPI) -> None:
                 "reason": reason,
                 "distribution": distribution,
                 "statuses": ["valid", "quarantine", "superseded", "duplicate"],
+                "fallback_count": sum(
+                    1 for row in rows if "FALLBACK_APPLIED" in row.get("flags", [])),
             }
         )
         return render(request, "movements.html", context)
+
+    @app.get("/revisions")
+    def revisions_page(request: Request):
+        store = request.app.state.store
+        context = base(request, "版本裁决", "/revisions")
+        run = context["run"]
+        decisions = store.revision_decisions(run["run_id"]) if run else []
+        context.update(
+            {
+                "decisions": decisions,
+                "revision_summary": revisions_mod.summarize(decisions),
+                "outcome_labels": revisions_mod.OUTCOME_LABELS,
+            }
+        )
+        return render(request, "revisions.html", context)
 
     @app.get("/layers")
     def layers_page(request: Request):

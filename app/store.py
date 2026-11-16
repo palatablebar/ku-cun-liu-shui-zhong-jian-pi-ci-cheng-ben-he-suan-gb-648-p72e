@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS runs (
     quarantined INTEGER NOT NULL DEFAULT 0,
     superseded INTEGER NOT NULL DEFAULT 0,
     duplicate INTEGER NOT NULL DEFAULT 0,
+    fallback INTEGER NOT NULL DEFAULT 0,
     blank INTEGER NOT NULL DEFAULT 0,
     segments INTEGER NOT NULL DEFAULT 0,
     opening_qty TEXT NOT NULL DEFAULT '0',
@@ -135,6 +136,23 @@ CREATE TABLE IF NOT EXISTS count_state (
     run_id TEXT NOT NULL DEFAULT '',
     updated_at TEXT NOT NULL DEFAULT ''
 );
+CREATE TABLE IF NOT EXISTS revision_decisions (
+    run_id TEXT NOT NULL,
+    doc_no TEXT NOT NULL,
+    line_no INTEGER NOT NULL,
+    outcome TEXT NOT NULL DEFAULT '',
+    max_revision INTEGER NOT NULL DEFAULT 1,
+    applied_revision INTEGER NOT NULL DEFAULT 0,
+    applied_row_no INTEGER NOT NULL DEFAULT 0,
+    rejected_row_no INTEGER NOT NULL DEFAULT 0,
+    rejected_reason TEXT NOT NULL DEFAULT '',
+    fallback_row_no INTEGER NOT NULL DEFAULT 0,
+    versions_json TEXT NOT NULL DEFAULT '[]',
+    impact_json TEXT NOT NULL DEFAULT '',
+    member_row_nos_json TEXT NOT NULL DEFAULT '[]'
+);
+CREATE INDEX IF NOT EXISTS idx_revision_decisions_run
+ON revision_decisions(run_id, doc_no, line_no);
 """
 
 def _bind(value):
@@ -148,8 +166,9 @@ RUN_COLUMNS = (
     "run_id", "created_at", "rule_version", "params_json", "movements_sha256",
     "opening_sha256", "counts_sha256", "movements_file", "opening_file", "counts_file",
     "movements_bytes", "opening_bytes", "counts_bytes", "raw_rows", "applied", "quarantined",
-    "superseded", "duplicate", "blank", "segments", "opening_qty", "in_qty", "out_qty",
-    "adj_in_qty", "adj_out_qty", "ending_qty", "cogs", "ending_value", "status", "duration_ms",
+    "superseded", "duplicate", "fallback", "blank", "segments", "opening_qty", "in_qty",
+    "out_qty", "adj_in_qty", "adj_out_qty", "ending_qty", "cogs", "ending_value", "status",
+    "duration_ms",
 )
 
 
@@ -202,11 +221,12 @@ class Store:
 
     def save_run(self, run: dict, movements: list[dict], layers: list[dict],
                  consumptions: list[dict], counts: list[dict],
-                 log: list[dict]) -> None:
+                 log: list[dict], decisions: list[dict] | None = None) -> None:
         params_json = json.dumps(run.get("params", {}), ensure_ascii=False, sort_keys=True)
         run_id = run["run_id"]
         with self._conn() as conn:
-            for table in ("movements", "layers", "consumptions", "counts", "run_log"):
+            for table in ("movements", "layers", "consumptions", "counts", "run_log",
+                          "revision_decisions"):
                 conn.execute(f"DELETE FROM {table} WHERE run_id = ?", (run_id,))
             conn.execute(
                 f"""INSERT OR REPLACE INTO runs ({", ".join(RUN_COLUMNS)})
@@ -293,6 +313,28 @@ class Store:
                     (run_id, item["seq"], item["at_utc"], item["level"],
                      item["stage"], item["message"])
                     for item in log
+                ],
+            )
+            conn.executemany(
+                """INSERT INTO revision_decisions (run_id, doc_no, line_no, outcome,
+                    max_revision, applied_revision, applied_row_no, rejected_row_no,
+                    rejected_reason, fallback_row_no, versions_json, impact_json,
+                    member_row_nos_json)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                [
+                    (
+                        run_id, item["doc_no"], item["line_no"], item["outcome"],
+                        int(item["max_revision"]), int(item.get("applied_revision") or 0),
+                        int(item.get("applied_row_no") or 0),
+                        int(item.get("rejected_row_no") or 0),
+                        item.get("rejected_reason", ""),
+                        int(item.get("fallback_row_no") or 0),
+                        json.dumps(item.get("versions", []), ensure_ascii=False),
+                        json.dumps(item.get("impact"), ensure_ascii=False)
+                        if item.get("impact") else "",
+                        json.dumps(item.get("member_row_nos", []), ensure_ascii=False),
+                    )
+                    for item in (decisions or [])
                 ],
             )
 
@@ -386,12 +428,37 @@ class Store:
             ).fetchall()
         return [dict(row) for row in rows]
 
+    def revision_decisions(self, run_id: str) -> list[dict]:
+        from . import reasons
+        from .modules.m3_quality import revisions as revisions_mod
+
+        with self._conn() as conn:
+            rows = conn.execute(
+                "SELECT * FROM revision_decisions"
+                " WHERE run_id = ? ORDER BY doc_no, line_no", (run_id,)
+            ).fetchall()
+        out = []
+        for row in rows:
+            item = dict(row)
+            item["versions"] = json.loads(item.pop("versions_json") or "[]")
+            impact_raw = item.pop("impact_json") or ""
+            item["impact"] = json.loads(impact_raw) if impact_raw else None
+            item["member_row_nos"] = json.loads(item.pop("member_row_nos_json") or "[]")
+            item["outcome_label"] = revisions_mod.OUTCOME_LABELS.get(
+                item["outcome"], item["outcome"])
+            item["rejected_label"] = reasons.label(item.get("rejected_reason", "")) \
+                if item.get("rejected_reason") else ""
+            out.append(item)
+        return out
+
     def replace_replay(self, run_id: str, layers: list[dict],
-                       consumptions: list[dict], movements: list[dict]) -> None:
-        """M4 单独重跑：只替换本批的层、消耗段与行状态。"""
+                       consumptions: list[dict], movements: list[dict],
+                       decisions: list[dict] | None = None) -> None:
+        """M4 单独重跑：只替换本批的层、消耗段、行状态与版本裁决记录。"""
         with self._conn() as conn:
             conn.execute("DELETE FROM layers WHERE run_id = ?", (run_id,))
             conn.execute("DELETE FROM consumptions WHERE run_id = ?", (run_id,))
+            conn.execute("DELETE FROM revision_decisions WHERE run_id = ?", (run_id,))
             conn.executemany(
                 """INSERT INTO layers (run_id, layer_id, sku, warehouse, origin, doc_no,
                     line_no, created_ts, unit_cost, qty_in, qty_remaining)
@@ -430,6 +497,28 @@ class Store:
                         int(row.get("applied_seq") or 0), run_id, row.get("seq", 0),
                     ),
                 )
+            conn.executemany(
+                """INSERT INTO revision_decisions (run_id, doc_no, line_no, outcome,
+                    max_revision, applied_revision, applied_row_no, rejected_row_no,
+                    rejected_reason, fallback_row_no, versions_json, impact_json,
+                    member_row_nos_json)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                [
+                    (
+                        run_id, item["doc_no"], item["line_no"], item["outcome"],
+                        int(item["max_revision"]), int(item.get("applied_revision") or 0),
+                        int(item.get("applied_row_no") or 0),
+                        int(item.get("rejected_row_no") or 0),
+                        item.get("rejected_reason", ""),
+                        int(item.get("fallback_row_no") or 0),
+                        json.dumps(item.get("versions", []), ensure_ascii=False),
+                        json.dumps(item.get("impact"), ensure_ascii=False)
+                        if item.get("impact") else "",
+                        json.dumps(item.get("member_row_nos", []), ensure_ascii=False),
+                    )
+                    for item in (decisions or [])
+                ],
+            )
 
     # ---------- 盘点版本水位 ----------
     def count_state(self, count_no: str) -> dict | None:

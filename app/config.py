@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from decimal import Decimal
 from pathlib import Path
 
-RULE_VERSION = "2026.11.1"
+RULE_VERSION = "2026.11.2"
 BASE_DIR = Path(__file__).resolve().parent
 PROJECT_DIR = BASE_DIR.parent
 

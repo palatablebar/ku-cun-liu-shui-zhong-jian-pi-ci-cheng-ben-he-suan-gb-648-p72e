@@ -1,9 +1,9 @@
-"""质量编排：归一 → 定级 → 隔离区视图。"""
+"""质量编排：归一 → 定级 → 隔离区视图 → 版本裁决视图。"""
 from __future__ import annotations
 
 from ... import reasons
 from ..m2_doc_rules import service as m2_service
-from . import quarantine, rules
+from . import quarantine, revisions, rules
 
 
 def build(settings, parsed: dict) -> dict:
@@ -32,7 +32,25 @@ def payload(store, run) -> dict:
     }
 
 
+def revisions_payload(store, run) -> dict:
+    if not run:
+        return {"run_id": None, "decisions": [], "summary": revisions.summarize([])}
+    decisions = store.revision_decisions(run["run_id"])
+    return {
+        "run_id": run["run_id"],
+        "decisions": decisions,
+        "summary": revisions.summarize(decisions),
+        "outcome_labels": revisions.OUTCOME_LABELS,
+    }
+
+
 def csv(store, run) -> tuple[str, str]:
     filename = f"quarantine-{(run or {}).get('run_id', 'none')}.csv"
     rows = store.quarantine(run["run_id"]) if run else []
     return filename, quarantine.csv_text(rows)
+
+
+def revisions_csv(store, run) -> tuple[str, str]:
+    filename = f"revisions-{(run or {}).get('run_id', 'none')}.csv"
+    decisions = store.revision_decisions(run["run_id"]) if run else []
+    return filename, revisions.csv_text(decisions)

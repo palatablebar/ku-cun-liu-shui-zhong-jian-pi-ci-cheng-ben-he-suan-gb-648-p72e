@@ -32,6 +32,8 @@ REASONS = {
     "DUP_DOC_CONFLICT": ("同版本取值冲突", "质量"),
     "DUPLICATE_ROW": ("完全重复行", "质量"),
     "SUPERSEDED": ("旧版本被取代", "质量"),
+    "REVISION_REJECTED": ("新版本被判废", "质量"),
+    "FALLBACK_APPLIED": ("新版本判废回退旧版", "质量"),
     "TRN_MISSING_LEG": ("调拨缺边", "重放"),
     "TRN_QTY_MISMATCH": ("调拨两边数量不等", "重放"),
     "TRN_SKU_MISMATCH": ("调拨两边物料不一致", "重放"),
@@ -78,6 +80,8 @@ PRIORITY = (
     "RETURN_DOC_NOT_FOUND",
     "RETURN_WAREHOUSE_MISMATCH",
     "RETURN_EXCEEDS_ORIGINAL",
+    "REVISION_REJECTED",
+    "FALLBACK_APPLIED",
     "DUP_DOC_CONFLICT",
 )
 

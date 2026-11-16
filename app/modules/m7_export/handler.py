@@ -8,7 +8,7 @@ from . import service
 
 router = APIRouter(prefix="/api/export", tags=["导出"])
 
-KINDS = ("movements.csv", "layers.csv", "cost.csv", "manifest.json")
+KINDS = ("movements.csv", "layers.csv", "cost.csv", "revisions.csv", "manifest.json")
 
 
 @router.get("/{kind}")

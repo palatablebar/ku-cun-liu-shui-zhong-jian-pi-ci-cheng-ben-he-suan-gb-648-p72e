@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block body %}
+<section class="stats">
+  <div class="stat">
+    <span class="stat-label">多版本单据行</span>
+    <strong class="stat-value">{{ revision_summary.total }}</strong>
+  </div>
+  <div class="stat">
+    <span class="stat-label">采纳最新版</span>
+    <strong class="stat-value">{{ revision_summary.outcome_counts | selectattr('code', 'equalto', 'revised') | map(attribute='count') | sum }}</strong>
+  </div>
+  <div class="stat">
+    <span class="stat-label">新版判废·回退旧版</span>
+    <strong class="stat-value accent">{{ revision_summary.fallback }}</strong>
+  </div>
+  <div class="stat">
+    <span class="stat-label">新版判废·无可回退</span>
+    <strong class="stat-value">{{ revision_summary.rejected_all }}</strong>
+  </div>
+  <div class="stat">
+    <span class="stat-label">同版本冲突</span>
+    <strong class="stat-value">{{ revision_summary.conflict }}</strong>
+  </div>
+  <div class="stat">
+    <span class="stat-label">影响成本/库存的键</span>
+    <strong class="stat-value">{{ revision_summary.impacted }}</strong>
+  </div>
+</section>
+
+<section class="panel">
+  <header class="panel-head">
+    <h2>版本裁决：每张单据行最终采用哪一版</h2>
+    <div class="filters">
+      <span class="panel-sub">{{ decisions | length }} 个业务键</span>
+      <a class="chip" href="/api/revisions.csv">裁决 CSV</a>
+      <a class="chip" href="/api/export/revisions.csv">证据导出</a>
+    </div>
+  </header>
+  <p class="notice">
+    影响差额的口径统一为「若改采纳判废的新版本 − 当前实际入账」：正数表示改用新版会增加，负数表示减少。
+    回退行在流水页以「采纳 + 回退标记」展示，判废新版本在隔离区可按原因码 REVISION_REJECTED 筛选，所有版本均留痕不删除。
+  </p>
+  <div class="table-wrap">
+    <table class="table" data-sortable>
+      <thead>
+        <tr>
+          <th>单据号</th>
+          <th class="num" data-sort="num">行</th>
+          <th>裁决结论</th>
+          <th class="num" data-sort="num">最高版本</th>
+          <th class="num" data-sort="num">采纳版本</th>
+          <th class="num" data-sort="num">采纳行</th>
+          <th class="num" data-sort="num">判废行</th>
+          <th>判废原因</th>
+          <th class="num" data-sort="num">期末数量影响 kg</th>
+          <th class="num" data-sort="num">期末金额影响</th>
+          <th class="num" data-sort="num">出库成本影响</th>
+          <th>各版本（行号/版本/数量kg/单价/状态）</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in decisions %}
+        <tr class="{% if item.outcome in ('rejected_all', 'conflict') %}is-bad{% elif item.outcome == 'rejected_fallback' %}is-warn{% endif %}">
+          <td>{{ item.doc_no }}</td>
+          <td class="num">{{ item.line_no }}</td>
+          <td>
+            <span class="dot dot-{% if item.outcome == 'revised' %}ok{% elif item.outcome == 'rejected_fallback' %}warn{% else %}bad{% endif %}"></span>
+            {{ outcome_labels[item.outcome] }}
+          </td>
+          <td class="num">v{{ item.max_revision }}</td>
+          <td class="num">{% if item.applied_revision %}v{{ item.applied_revision }}{% else %}—{% endif %}</td>
+          <td class="num">{{ item.applied_row_no or '—' }}</td>
+          <td class="num">{{ item.rejected_row_no or '—' }}</td>
+          <td title="{{ item.rejected_reason | reason_label }}">{{ item.rejected_reason or '—' }}</td>
+          {% if item.impact %}
+          <td class="num">{{ item.impact.ending_qty_delta | qty }}</td>
+          <td class="num">{{ item.impact.ending_value_delta | money }}</td>
+          <td class="num">{{ item.impact.cogs_delta | money }}</td>
+          {% else %}
+          <td class="num hint">无差异</td>
+          <td class="num hint">无差异</td>
+          <td class="num hint">无差异</td>
+          {% endif %}
+          <td class="wide">
+            {% for ver in item.versions %}
+            <span class="tag {% if ver.status == 'valid' %}tag-ok{% elif ver.status == 'quarantine' %}tag-bad{% else %}tag-warn{% endif %}">
+              行{{ ver.row_no }}/v{{ ver.revision }}/{{ ver.qty_kg }}kg{% if ver.price %}/¥{{ ver.price }}{% endif %}/{{ ver.status | status_label }}{% if ver.reason %}({{ ver.reason }}){% endif %}
+            </span>
+            {% endfor %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="12" class="hint">本批没有多版本单据行。</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

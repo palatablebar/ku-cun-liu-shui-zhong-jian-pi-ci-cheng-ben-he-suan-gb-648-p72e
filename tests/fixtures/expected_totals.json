@@ -5,6 +5,7 @@
     "quarantined": 18,
     "superseded": 1,
     "duplicate": 1,
+    "fallback": 0,
     "blank": 0,
     "segments": 2
   },

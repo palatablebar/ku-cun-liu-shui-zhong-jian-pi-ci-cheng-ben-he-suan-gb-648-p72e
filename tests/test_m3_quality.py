@@ -36,6 +36,7 @@ def test_status_counts_match_expected(settings):
         "quarantined": 12,
         "superseded": 1,
         "duplicate": 1,
+        "fallback": 0,
     }
     assert built["counts"]["raw_rows"] == EXPECTED["counts"]["raw_rows"]
     assert built["counts"]["superseded"] == EXPECTED["counts"]["superseded"]

@@ -1,6 +1,6 @@
 # 深度登记 stockflow
 
-- 规模：中型（7 个功能模块 / 7 个页面 / 73 条测试 / 12 条 TRAP）
+- 规模：中型（7 个功能模块 / 8 个页面 / 91 条测试 / 13 条 TRAP）
 - 核心规则：按 `(发生时间, 单据号, 行号)` 全序重放；出库超过在手整行隔离且不压负库存；调拨必须双边同料异仓等量；入库建 FIFO 层、出库吃最早层、退货带原单回原层、无原单建新层；成本 = 消耗层金额之和（Decimal）。
 - 使用者与工作流：区域仓 3 个仓、900 个物料的库存核算员，每月把三套系统导出的出入库流水、期初余额与实盘表放进来，一次运行得到采纳/隔离/层/成本/盘点差异与可导出的证据行。
 
@@ -10,7 +10,7 @@
 |---|---|---|---|---|
 | M1 流水采信 | 导入流水或期初，看到编码、分段、列数与原始行号 | POST /api/movements/import、页面 /movements | `app/modules/m1_ingest/reader.py` `app/modules/m1_ingest/decode.py` | `tests/test_m1_ingest.py` |
 | M2 单据规则 | 查列定义、方向、单价义务与单位换算 | GET /api/contract | `app/modules/m2_doc_rules/contract.py` `app/modules/m2_doc_rules/coerce.py` | `tests/test_m2_doc_rules.py` |
-| M3 质量隔离 | 按原因码看隔离行并导出证据 CSV | GET /api/quarantine、GET /api/quarantine.csv | `app/modules/m3_quality/rules.py` `app/modules/m3_quality/quarantine.py` | `tests/test_m3_quality.py` |
+| M3 质量隔离 | 按原因码看隔离行、看每张单据行的版本裁决结论与成本/库存影响，导出证据 CSV | GET /api/quarantine、GET /api/revisions | `app/modules/m3_quality/rules.py` `app/modules/m3_quality/revisions.py` `app/modules/m3_quality/quarantine.py` | `tests/test_m3_quality.py` `tests/test_revisions.py` |
 | M4 时序重放 | 重放流水，看超库存拒绝、调拨配对与回原层 | POST /api/replay | `app/modules/m4_replay/replay.py` `app/modules/m4_replay/fifo.py` | `tests/test_m4_replay.py` |
 | M5 FIFO 成本 | 看层、按单据出库成本与金额恒等式 | GET /api/cost、页面 /cost | `app/modules/m5_cost/cogs.py` `app/modules/m5_cost/layers.py` | `tests/test_m5_cost.py` |
 | M6 盘点对账 | 看六本账、提交实盘、按版本闸门拒旧版本 | GET /api/reconcile、POST /api/reconcile/counts | `app/modules/m6_reconcile/counts.py` `app/modules/m6_reconcile/balance.py` | `tests/test_m6_reconcile.py` |
@@ -29,6 +29,7 @@
 | TRAP-10 | 22 个层金额用 float 累加 | 合计与逐层复算差 0.01 | 数量与金额一律 Decimal，金额保存精确乘积 | `app/modules/m4_replay/replay.py`、`app/modules/m5_cost/cogs.py` | `tests/test_m5_cost.py::test_cogs_is_exact_decimal` |
 | TRAP-13 | 导出文件行序与发生时间相反 | 按文件顺序重放，出现假负库存 | 全序 `(发生时间, 单据号, 行号)` 重放，乱序输入结果不变 | `app/modules/m4_replay/replay.py` | `tests/test_m4_replay.py::test_replay_totals_survive_input_permutation` |
 | TRAP-14 | 同一单据同版本两个数量 | 后写覆盖，结果随文件顺序变化 | 高版本覆盖低版本；同版本不同取值整组隔离 | `app/modules/m3_quality/rules.py` | `tests/test_m3_quality.py::test_same_revision_conflict_quarantined` |
+| TRAP-27 | 迟到的新版本把数量改坏或字段缺失 | 只隔离新版本、旧数量静默继续入账（复核人看不出已修订）；或停用整张单据拖住成本核算 | 新版本记 `REVISION_REJECTED` 隔离，回退采纳干净旧版并打 `FALLBACK_APPLIED`（同单其他行照常入账）；无干净旧版才整组隔离；反事实重放量化期末库存/金额/出库成本影响，所有版本留痕、同批重跑一致 | `app/modules/m3_quality/rules.py`、`app/modules/m3_quality/revisions.py` | `tests/test_revisions.py` |
 | TRAP-15 | 同一物料 g 与 kg 混用 | 合计差 1000 倍 | 单位列 + 换算系数，先折 kg 再算 | `app/config.py`、`app/modules/m2_doc_rules/coerce.py` | `tests/test_m2_doc_rules.py::test_unit_conversion_g_to_kg` |
 | TRAP-16 | 末行没有换行且列数不足 | 半行被当成有效入库 | 末行缺列且无换行判 `TRUNCATED_TAIL` | `app/modules/m1_ingest/reader.py` | `tests/test_m1_ingest.py::test_truncated_tail_rejected` |
 | TRAP-19 | 一行同时命中列数、单位、数量三类问题 | 取哪条原因码取决于检查顺序 | 原因码优先级表固定，取最高一条 | `app/reasons.py`、`app/modules/m3_quality/rules.py` | `tests/test_m3_quality.py::test_priority_order_is_stable` |
@@ -37,7 +38,7 @@
 
 ## 对账规则
 
-- 行数账：原始行 = 采纳 + 隔离 + 被取代 + 重复（空行单独计数，表头分段单独计数）。
+- 行数账：原始行 = 采纳 + 隔离 + 被取代 + 重复（空行单独计数，表头分段单独计数）；其中「新版判废回退旧版」的采纳行单独以 fallback 计数，状态仍为采纳。
 - 数量账：期初 + 入 − 出 + 调整入 − 调整出 = 期末；入含调拨入与退货，出含调拨出。
 - 分层账：Σ 层剩余数量 = 期末数量；Σ 层金额 = 期末金额。
 - 守恒账：Σ 建层数量 − 消耗 + 恢复 = Σ 层剩余；金额同理（逐层算术恒等）。

@@ -40,6 +40,8 @@ def reconcile(run: dict, movements: list[dict], layers: list[dict],
     quarantined = [row for row in movements if row["status"] == "quarantine"]
     superseded = [row for row in movements if row["status"] == "superseded"]
     duplicate = [row for row in movements if row["status"] == "duplicate"]
+    fallback = [row for row in applied
+                if "FALLBACK_APPLIED" in row.get("flags", [])]
 
     opening_qty = _dec(run["opening_qty"])
     in_qty = _dec(run["in_qty"])
@@ -84,7 +86,8 @@ def reconcile(run: dict, movements: list[dict], layers: list[dict],
             run["raw_rows"],
             len(applied) + len(quarantined) + len(superseded) + len(duplicate),
             f"采纳 {len(applied)} / 隔离 {len(quarantined)} / 被取代 {len(superseded)}"
-            f" / 重复 {len(duplicate)}",
+            f" / 重复 {len(duplicate)}"
+            + (f" / 其中回退采纳 {len(fallback)}" if fallback else ""),
         ),
         _check(
             "quantity",

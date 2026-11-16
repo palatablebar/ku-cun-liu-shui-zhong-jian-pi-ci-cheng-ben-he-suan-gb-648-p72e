@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from ...errors import DomainError
+from ..m3_quality import revisions as revisions_mod
 from ..m5_cost import cogs
 from ..m6_reconcile import balance
 from . import csv_out, manifest_out
@@ -24,6 +25,10 @@ def build(store, run, settings, kind: str) -> tuple[str, str, str]:
     if kind == "cost.csv":
         return (f"cost-{run_id}.csv",
                 csv_out.cost_csv(cogs.by_doc(segments)), "text/csv; charset=utf-8")
+    if kind == "revisions.csv":
+        return (f"revisions-{run_id}.csv",
+                revisions_mod.csv_text(store.revision_decisions(run_id)),
+                "text/csv; charset=utf-8")
     if kind == "manifest.json":
         report = balance.reconcile(run, movements, layers, segments,
                                    store.counts(run_id))
@@ -45,6 +50,8 @@ def summary(store, run) -> dict:
             {"kind": "layers.csv", "label": "FIFO 层",
              "rows": len(store.layers(run_id))},
             {"kind": "cost.csv", "label": "单据成本", "rows": len(cogs.by_doc(segments))},
+            {"kind": "revisions.csv", "label": "版本裁决",
+             "rows": len(store.revision_decisions(run_id))},
             {"kind": "manifest.json", "label": "运行清单", "rows": 1},
         ],
         "counts": {
@@ -52,6 +59,7 @@ def summary(store, run) -> dict:
             "quarantined": run["quarantined"],
             "superseded": run["superseded"],
             "duplicate": run["duplicate"],
+            "fallback": run.get("fallback", 0),
         },
         "totals": {
             "opening_qty": run["opening_qty"],

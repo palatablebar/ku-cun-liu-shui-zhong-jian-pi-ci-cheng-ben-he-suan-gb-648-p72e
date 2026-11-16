@@ -11,7 +11,7 @@ from ... import reasons
 
 HEADER = (
     "文件行号", "单据号", "单据行号", "类型", "仓库", "物料编码",
-    "原因码", "原因", "原数量", "原单位", "原单价", "原时间", "版本",
+    "原因码", "原因", "原数量", "原单位", "原单价", "原时间", "版本", "标记",
 )
 
 
@@ -39,6 +39,7 @@ def csv_text(rows) -> str:
                 row.get("raw_cost", ""),
                 row.get("raw_ts", ""),
                 row.get("revision", 1),
+                "|".join(row.get("flags", []) or []),
             ]
         )
     return buffer.getvalue()

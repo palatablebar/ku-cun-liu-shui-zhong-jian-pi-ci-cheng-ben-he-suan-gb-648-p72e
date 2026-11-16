@@ -10,6 +10,10 @@
     <strong class="stat-value">{{ status_counts.quarantine }}</strong>
   </div>
   <div class="stat">
+    <span class="stat-label">新版判废回退</span>
+    <strong class="stat-value accent">{{ status_counts.fallback }}</strong>
+  </div>
+  <div class="stat">
     <span class="stat-label">期末数量 kg</span>
     <strong class="stat-value accent">{{ (run.ending_qty if run else 0) | qty }}</strong>
   </div>
@@ -78,6 +82,29 @@
 </div>
 
 <div class="row-2">
+  <section class="panel">
+    <header class="panel-head">
+      <h2>版本裁决</h2>
+      <a class="chip" href="/revisions">详情</a>
+    </header>
+    <table class="table">
+      <thead><tr><th>结论</th><th class="num">业务键数</th></tr></thead>
+      <tbody>
+        {% for item in revision_summary.outcome_counts %}
+        <tr>
+          <td>{{ item.label }}</td>
+          <td class="num">{{ item.count }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="2" class="hint">本批没有多版本单据行。</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <p class="notice notice-{% if revision_summary.impacted %}bad{% else %}ok{% endif %}">
+      有 {{ revision_summary.impacted }} 个键若改采纳判废新版本会改变期末库存或成本，详见版本裁决页。
+    </p>
+  </section>
+
   <section class="panel">
     <header class="panel-head">
       <h2>隔离原因</h2>
